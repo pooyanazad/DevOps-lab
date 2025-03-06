@@ -1,0 +1,227 @@
+version: '3.8'
+
+networks:
+  devops_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+services:
+  # Universal Service Manager - Nginx endpoint
+  usm:
+    build:
+      context: ./usm
+      dockerfile: Dockerfile
+    container_name: usm
+    networks:
+      devops_network:
+        ipv4_address: 172.20.0.2
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./usm/nginx:/etc/nginx/conf.d
+      - ./usm/ssl:/etc/nginx/ssl
+    depends_on:
+      - gitlab
+      - nexus
+      - sonarqube
+      - elasticsearch
+    restart: always
+
+  # GitLab with container registry
+  gitlab:
+    image: gitlab/gitlab-ce:latest
+    container_name: gitlab
+    hostname: gitlab.local
+    networks:
+      devops_network:
+        ipv4_address: 172.20.0.3
+    ports:
+      - "8080:80"
+      - "8022:22"
+      - "8443:443"
+      - "5050:5050" # Container Registry
+    volumes:
+      - gitlab_config:/etc/gitlab
+      - gitlab_logs:/var/log/gitlab
+      - gitlab_data:/var/opt/gitlab
+    environment:
+      GITLAB_OMNIBUS_CONFIG: |
+        external_url 'http://gitlab.local:8080'
+        registry_external_url 'http://gitlab.local:5050'
+        gitlab_rails['registry_enabled'] = true
+        gitlab_rails['initial_root_password'] = 'devops_password'
+    restart: always
+
+  # Nexus Repository Manager
+  nexus:
+    image: sonatype/nexus3:latest
+    container_name: nexus
+    networks:
+      devops_network:
+        ipv4_address: 172.20.0.4
+    ports:
+      - "8081:8081"
+      - "8082:8082" # Docker proxy repository
+    volumes:
+      - nexus_data:/nexus-data
+    restart: always
+
+  # SonarQube
+  sonarqube:
+    image: sonarqube:latest
+    container_name: sonarqube
+    networks:
+      devops_network:
+        ipv4_address: 172.20.0.5
+    ports:
+      - "9000:9000"
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_logs:/opt/sonarqube/logs
+      - sonarqube_extensions:/opt/sonarqube/extensions
+    environment:
+      - SONAR_JDBC_URL=jdbc:postgresql://sonarqube-db:5432/sonar
+      - SONAR_JDBC_USERNAME=sonar
+      - SONAR_JDBC_PASSWORD=sonar
+    depends_on:
+      - sonarqube-db
+    restart: always
+
+  # PostgreSQL for SonarQube
+  sonarqube-db:
+    image: postgres:13
+    container_name: sonarqube-db
+    networks:
+      devops_network:
+        ipv4_address: 172.20.0.6
+    volumes:
+      - sonarqube_db:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=sonar
+      - POSTGRES_PASSWORD=sonar
+      - POSTGRES_DB=sonar
+    restart: always
+
+  # DevOps Tools Server (Terraform, Ansible)
+  devops-tools:
+    build:
+      context: ./devops-tools
+      dockerfile: Dockerfile
+    container_name: devops-tools
+    networks:
+      devops_network:
+        ipv4_address: 172.20.0.7
+    volumes:
+      - ./devops-tools/projects:/projects
+      - ./devops-tools/ssh:/root/.ssh
+    restart: always
+
+  # Minikube (Kubernetes)
+  minikube:
+    image: paulbouwer/hello-kubernetes:1.10
+    container_name: minikube
+    networks:
+      devops_network:
+        ipv4_address: 172.20.0.8
+    ports:
+      - "30000:8080"
+    restart: always
+
+  # Selenium Grid
+  selenium-hub:
+    image: selenium/hub:4.10.0
+    container_name: selenium-hub
+    networks:
+      devops_network:
+        ipv4_address: 172.20.0.9
+    ports:
+      - "4444:4444"
+    restart: always
+
+  selenium-chrome:
+    image: selenium/node-chrome:4.10.0
+    container_name: selenium-chrome
+    networks:
+      devops_network:
+        ipv4_address: 172.20.0.10
+    depends_on:
+      - selenium-hub
+    environment:
+      - SE_EVENT_BUS_HOST=selenium-hub
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+    restart: always
+
+  selenium-firefox:
+    image: selenium/node-firefox:4.10.0
+    container_name: selenium-firefox
+    networks:
+      devops_network:
+        ipv4_address: 172.20.0.11
+    depends_on:
+      - selenium-hub
+    environment:
+      - SE_EVENT_BUS_HOST=selenium-hub
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+    restart: always
+
+  # ELK Stack
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.10
+    container_name: elasticsearch
+    networks:
+      devops_network:
+        ipv4_address: 172.20.0.12
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    environment:
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    restart: always
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:7.17.10
+    container_name: logstash
+    networks:
+      devops_network:
+        ipv4_address: 172.20.0.13
+    ports:
+      - "5000:5000"
+      - "9600:9600"
+    volumes:
+      - ./elk/logstash/pipeline:/usr/share/logstash/pipeline
+    depends_on:
+      - elasticsearch
+    restart: always
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.17.10
+    container_name: kibana
+    networks:
+      devops_network:
+        ipv4_address: 172.20.0.14
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    depends_on:
+      - elasticsearch
+    restart: always
+
+volumes:
+  gitlab_config:
+  gitlab_logs:
+  gitlab_data:
+  nexus_data:
+  sonarqube_data:
+  sonarqube_logs:
+  sonarqube_extensions:
+  sonarqube_db:
+  elasticsearch_data:
