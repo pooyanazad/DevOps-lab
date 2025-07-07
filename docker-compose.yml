@@ -23,6 +23,10 @@ services:
     volumes:
       - ./usm/nginx:/etc/nginx/conf.d
       - ./usm/ssl:/etc/nginx/ssl
+    deploy:
+      resources:
+        limits:
+          memory: 512m
     depends_on:
       - gitlab
       - nexus
@@ -53,6 +57,10 @@ services:
         registry_external_url 'http://gitlab.local:5050'
         gitlab_rails['registry_enabled'] = true
         gitlab_rails['initial_root_password'] = 'devops_password'
+    deploy:
+      resources:
+        limits:
+          memory: 4g
     restart: always
 
   # Nexus Repository Manager
@@ -67,6 +75,10 @@ services:
       - "8082:8082" # Docker proxy repository
     volumes:
       - nexus_data:/nexus-data
+    deploy:
+      resources:
+        limits:
+          memory: 2g
     restart: always
 
   # SonarQube
@@ -87,6 +99,10 @@ services:
       - SONAR_JDBC_USERNAME=sonar
       - SONAR_JDBC_PASSWORD=sonar
     depends_on:
+    deploy:
+      resources:
+        limits:
+          memory: 2g
       - sonarqube-db
     restart: always
 
@@ -103,6 +119,10 @@ services:
       - POSTGRES_USER=sonar
       - POSTGRES_PASSWORD=sonar
       - POSTGRES_DB=sonar
+    deploy:
+      resources:
+        limits:
+          memory: 512m
     restart: always
 
   # DevOps Tools Server (Terraform, Ansible)
@@ -117,6 +137,10 @@ services:
     volumes:
       - ./devops-tools/projects:/projects
       - ./devops-tools/ssh:/root/.ssh
+    deploy:
+      resources:
+        limits:
+          memory: 512m
     restart: always
 
   # Minikube (Kubernetes)
@@ -128,6 +152,10 @@ services:
         ipv4_address: 172.20.0.8
     ports:
       - "30000:8080"
+    deploy:
+      resources:
+        limits:
+          memory: 1g
     restart: always
 
   # Selenium Grid
@@ -139,6 +167,10 @@ services:
         ipv4_address: 172.20.0.9
     ports:
       - "4444:4444"
+    deploy:
+      resources:
+        limits:
+          memory: 512m
     restart: always
 
   selenium-chrome:
@@ -182,6 +214,10 @@ services:
     environment:
       - discovery.type=single-node
       - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    deploy:
+      resources:
+        limits:
+          memory: 2g
     volumes:
       - elasticsearch_data:/usr/share/elasticsearch/data
     restart: always
@@ -198,6 +234,10 @@ services:
     volumes:
       - ./elk/logstash/pipeline:/usr/share/logstash/pipeline
     depends_on:
+    deploy:
+      resources:
+        limits:
+          memory: 1g
       - elasticsearch
     restart: always
 
@@ -211,6 +251,10 @@ services:
       - "5601:5601"
     environment:
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    deploy:
+      resources:
+        limits:
+          memory: 1g
     depends_on:
       - elasticsearch
     restart: always
