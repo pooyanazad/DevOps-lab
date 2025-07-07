@@ -33,4 +33,7 @@ RUN mkdir -p /projects
 
 WORKDIR /projects
 
+# Health check: Check if ansible and terraform are installed
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 CMD ansible --version > /dev/null && terraform --version > /dev/null || exit 1
+
 CMD ["tail", "-f", "/dev/null"]
