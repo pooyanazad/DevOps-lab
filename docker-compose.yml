@@ -1,15 +1,22 @@
+# Specify the Docker Compose file format version
 version: '3.8'
 
+# Define custom networks
 networks:
   devops_network:
     driver: bridge
     ipam:
       config:
+        # Define a specific subnet for the network to ensure consistent IP addresses
         - subnet: 172.20.0.0/16
 
+# Define the services (containers)
 services:
   # Universal Service Manager - Nginx endpoint
+  # This service acts as a reverse proxy and serves the static USM HTML content.
+  # It forwards requests to other services based on the path.
   usm:
+    # Build the image from the Dockerfile in the ./usm directory
     build:
       context: ./usm
       dockerfile: Dockerfile
@@ -17,16 +24,23 @@ services:
     networks:
       devops_network:
         ipv4_address: 172.20.0.2
+    # Map host ports to container ports
     ports:
+      # HTTP port
       - "80:80"
+      # HTTPS port
       - "443:443"
+    # Mount volumes for Nginx configuration and SSL certificates
     volumes:
       - ./usm/nginx:/etc/nginx/conf.d
       - ./usm/ssl:/etc/nginx/ssl
+    # Define deployment constraints or configurations (optional)
     deploy:
       resources:
         limits:
           memory: 512m
+    # Specify dependencies on other services. USM needs these services to be running
+    # for the proxy to work correctly.
     depends_on:
       - gitlab
       - nexus
@@ -35,13 +49,19 @@ services:
     restart: always
 
   # GitLab with container registry
+  # A complete DevOps platform providing Git repository management, CI/CD, and more.
   gitlab:
+    # Use the latest official GitLab Community Edition image
     image: gitlab/gitlab-ce:latest
     container_name: gitlab
     hostname: gitlab.local
     networks:
       devops_network:
         ipv4_address: 172.20.0.3
+    # Map host ports to container ports
+    # 8080: HTTP (remapped from 80 inside container)
+    # 8022: SSH (remapped from 22 inside container)
+    # 8443: HTTPS (remapped from 443 inside container)
     ports:
       - "8080:80"
       - "8022:22"
@@ -49,12 +69,19 @@ services:
       - "5050:5050" # Container Registry
     volumes:
       - gitlab_config:/etc/gitlab
+      # Persist GitLab configuration
       - gitlab_logs:/var/log/gitlab
+      # Persist GitLab logs
       - gitlab_data:/var/opt/gitlab
+      # Persist GitLab application data
     environment:
+      # Configure GitLab using environment variables
       GITLAB_OMNIBUS_CONFIG: |
+        # Set the external URL for GitLab
         external_url 'http://gitlab.local:8080'
+        # Set the external URL for the container registry
         registry_external_url 'http://gitlab.local:5050'
+        # Enable the container registry
         gitlab_rails['registry_enabled'] = true
         gitlab_rails['initial_root_password'] = 'devops_password'
     deploy:
@@ -64,12 +91,17 @@ services:
     restart: always
 
   # Nexus Repository Manager
+  # A universal repository manager supporting various formats like Maven, npm, Docker, etc.
   nexus:
+    # Use the latest official Nexus 3 image
     image: sonatype/nexus3:latest
     container_name: nexus
     networks:
       devops_network:
         ipv4_address: 172.20.0.4
+    # Map host ports to container ports
+    # 8081: Nexus UI and main repository access
+    # 8082: Docker proxy repository port
     ports:
       - "8081:8081"
       - "8082:8082" # Docker proxy repository
@@ -82,12 +114,15 @@ services:
     restart: always
 
   # SonarQube
+  # A platform for continuous inspection of code quality.
   sonarqube:
+    # Use the latest official SonarQube image
     image: sonarqube:latest
     container_name: sonarqube
     networks:
       devops_network:
         ipv4_address: 172.20.0.5
+    # Map host port 9000 to container port 9000 for the SonarQube UI
     ports:
       - "9000:9000"
     volumes:
@@ -95,27 +130,35 @@ services:
       - sonarqube_logs:/opt/sonarqube/logs
       - sonarqube_extensions:/opt/sonarqube/extensions
     environment:
+      # Configure SonarQube to connect to the PostgreSQL database
+      # SONAR_JDBC_URL: Database connection string
       - SONAR_JDBC_URL=jdbc:postgresql://sonarqube-db:5432/sonar
+      # SONAR_JDBC_USERNAME: Database username
       - SONAR_JDBC_USERNAME=sonar
+      # SONAR_JDBC_PASSWORD: Database password
       - SONAR_JDBC_PASSWORD=sonar
-    depends_on:
     deploy:
       resources:
+    # Specify dependency on the SonarQube database service
         limits:
           memory: 2g
       - sonarqube-db
     restart: always
 
   # PostgreSQL for SonarQube
+  # The database service for SonarQube.
   sonarqube-db:
+    # Use the official PostgreSQL 13 image
     image: postgres:13
     container_name: sonarqube-db
     networks:
       devops_network:
         ipv4_address: 172.20.0.6
     volumes:
+      # Persist the database data
       - sonarqube_db:/var/lib/postgresql/data
     environment:
+      # Configure PostgreSQL database details
       - POSTGRES_USER=sonar
       - POSTGRES_PASSWORD=sonar
       - POSTGRES_DB=sonar
@@ -126,7 +169,9 @@ services:
     restart: always
 
   # DevOps Tools Server (Terraform, Ansible)
+  # A container for running various DevOps tools.
   devops-tools:
+    # Build the image from the Dockerfile in the ./devops-tools directory
     build:
       context: ./devops-tools
       dockerfile: Dockerfile
@@ -134,6 +179,8 @@ services:
     networks:
       devops_network:
         ipv4_address: 172.20.0.7
+    # Mount volumes for projects and SSH keys
+    # This allows accessing project code and using SSH for deployments/automation
     volumes:
       - ./devops-tools/projects:/projects
       - ./devops-tools/ssh:/root/.ssh
@@ -144,12 +191,15 @@ services:
     restart: always
 
   # Minikube (Kubernetes)
+  # A lightweight Kubernetes implementation for local development.
   minikube:
+    # Use a simple hello-kubernetes image as a placeholder/example
     image: paulbouwer/hello-kubernetes:1.10
     container_name: minikube
     networks:
       devops_network:
         ipv4_address: 172.20.0.8
+    # Map host port 30000 to container port 8080 (example port for a deployed app)
     ports:
       - "30000:8080"
     deploy:
@@ -159,11 +209,14 @@ services:
     restart: always
 
   # Selenium Grid
+  # A set of components for running Selenium tests in parallel across different machines and browsers.
   selenium-hub:
+    # Use the official Selenium Hub image
     image: selenium/hub:4.10.0
     container_name: selenium-hub
     networks:
       devops_network:
+        # Assign a static IP within the network
         ipv4_address: 172.20.0.9
     ports:
       - "4444:4444"
@@ -174,25 +227,32 @@ services:
     restart: always
 
   selenium-chrome:
+    # Use the official Selenium Node with Chrome image
     image: selenium/node-chrome:4.10.0
     container_name: selenium-chrome
     networks:
       devops_network:
         ipv4_address: 172.20.0.10
+    # Depends on the selenium-hub service
     depends_on:
       - selenium-hub
     environment:
+      # Configure the node to connect to the Selenium Hub's event bus
       - SE_EVENT_BUS_HOST=selenium-hub
+      # Port for publishing events to the hub
       - SE_EVENT_BUS_PUBLISH_PORT=4442
+      # Port for subscribing to events from the hub
       - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
     restart: always
 
   selenium-firefox:
+    # Use the official Selenium Node with Firefox image
     image: selenium/node-firefox:4.10.0
     container_name: selenium-firefox
     networks:
       devops_network:
         ipv4_address: 172.20.0.11
+    # Depends on the selenium-hub service
     depends_on:
       - selenium-hub
     environment:
@@ -202,15 +262,21 @@ services:
     restart: always
 
   # ELK Stack
+  # Elasticsearch: A search and analytics engine.
   elasticsearch:
+    # Use the official Elasticsearch image
     image: docker.elastic.co/elasticsearch/elasticsearch:7.17.10
     container_name: elasticsearch
     networks:
       devops_network:
         ipv4_address: 172.20.0.12
+    # Map host ports to container ports
+    # 9200: HTTP REST API
+    # 9300: Internal communication (node-to-node)
     ports:
       - "9200:9200"
       - "9300:9300"
+    # Configure Elasticsearch settings
     environment:
       - discovery.type=single-node
       - ES_JAVA_OPTS=-Xms512m -Xmx512m
@@ -218,14 +284,18 @@ services:
       resources:
         limits:
           memory: 2g
+    # Persist Elasticsearch data
     volumes:
       - elasticsearch_data:/usr/share/elasticsearch/data
     restart: always
 
+  # Logstash: A server-side data processing pipeline that ingests data from various sources,
+  # transforms it, and then sends it to a "stash" like Elasticsearch.
   logstash:
     image: docker.elastic.co/logstash/logstash:7.17.10
     container_name: logstash
     networks:
+      # Assign a static IP within the network
       devops_network:
         ipv4_address: 172.20.0.13
     ports:
@@ -233,14 +303,18 @@ services:
       - "9600:9600"
     volumes:
       - ./elk/logstash/pipeline:/usr/share/logstash/pipeline
+    # Mount the Logstash pipeline configuration
     depends_on:
     deploy:
       resources:
         limits:
           memory: 1g
       - elasticsearch
+    # Depends on Elasticsearch
     restart: always
 
+  # Kibana: A data visualization dashboard for Elasticsearch.
+  # Used to search, view, and interact with data stored in Elasticsearch indices.
   kibana:
     image: docker.elastic.co/kibana/kibana:7.17.10
     container_name: kibana
@@ -248,8 +322,10 @@ services:
       devops_network:
         ipv4_address: 172.20.0.14
     ports:
+      # Map host port 5601 to container port 5601 for the Kibana UI
       - "5601:5601"
     environment:
+      # Configure Kibana to connect to Elasticsearch
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
     deploy:
       resources:
@@ -259,6 +335,7 @@ services:
       - elasticsearch
     restart: always
 
+# Define named volumes for data persistence
 volumes:
   gitlab_config:
   gitlab_logs:
