@@ -1,0 +1,15 @@
+{
+    "name": "devopslab-dashboard",
+    "version": "1.0.0",
+    "description": "DevOpsLab Dashboard with Container Management",
+    "main": "server.js",
+    "scripts": {
+        "start": "node server.js",
+        "dev": "node server.js"
+    },
+    "dependencies": {
+        "express": "^4.18.2",
+        "dockerode": "^4.0.0",
+        "ws": "^8.14.2"
+    }
+}
