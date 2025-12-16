@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DevOpsLab Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css">
+    <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.min.js"></script>
+</head>
+
+<body>
+    <div class="app">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <a href="http://localhost:9900/" class="logo">
+                <span class="logo-icon">🚀</span>
+                <span class="logo-text">DevOpsLab</span>
+            </a>
+            <nav class="nav">
+                <a href="#" class="nav-item active" data-view="services">
+                    <span class="nav-icon">📦</span>
+                    <span>Services</span>
+                </a>
+                <a href="#" class="nav-item" data-view="terminal">
+                    <span class="nav-icon">💻</span>
+                    <span>Terminal</span>
+                </a>
+                <a href="#" class="nav-item" data-view="volumes">
+                    <span class="nav-icon">💾</span>
+                    <span>Volumes</span>
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="status-indicator">
+                    <span class="status-dot"></span>
+                    <span id="container-count">0 containers</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main">
+            <!-- Header -->
+            <header class="header">
+                <h1 id="page-title">Services</h1>
+                <div class="header-actions">
+                    <button class="btn btn-secondary" onclick="refreshData()">
+                        <span>🔄</span> Refresh
+                    </button>
+                </div>
+            </header>
+
+            <!-- Services View -->
+            <section id="services-view" class="view active">
+                <div class="services-grid" id="services-grid">
+                    <!-- Services will be loaded here -->
+                </div>
+            </section>
+
+            <!-- Terminal View -->
+            <section id="terminal-view" class="view">
+                <div class="terminal-container">
+                    <div class="terminal-header">
+                        <select id="container-select" class="select">
+                            <option value="">Select a container...</option>
+                        </select>
+                        <button class="btn btn-primary" onclick="connectTerminal()">
+                            <span>🔗</span> Connect
+                        </button>
+                        <button class="btn btn-secondary" onclick="disconnectTerminal()">
+                            <span>✖</span> Disconnect
+                        </button>
+                    </div>
+                    <div id="terminal" class="terminal-box"></div>
+                </div>
+            </section>
+
+            <!-- Volumes View -->
+            <section id="volumes-view" class="view">
+                <div class="volumes-list" id="volumes-list">
+                    <!-- Volumes will be loaded here -->
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container"></div>
+
+    <!-- Modal -->
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-title">Confirm Action</h3>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p id="modal-message"></p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-danger" id="modal-confirm">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
