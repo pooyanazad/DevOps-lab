@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="DevOpsLab Unit Tests" tests="26" failures="0" time="0">
+  <testsuite name="unit" tests="26" failures="0">
+    <testcase name="code_validation" classname="devopslab.unit">
+    </testcase>
+  </testsuite>
+</testsuites>
