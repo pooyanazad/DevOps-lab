@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="DevOpsLab Integration Tests" tests="13" failures="0" time="0">
+  <testsuite name="integration" tests="13" failures="0">
+    <testcase name="integration_validation" classname="devopslab.integration">
+      
+    </testcase>
+  </testsuite>
+</testsuites>
