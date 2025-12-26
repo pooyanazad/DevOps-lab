@@ -1,0 +1,284 @@
+name: DevOpsLab CI Pipeline
+
+on:
+  pull_request:
+    branches: [main, master, develop]
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  # =============================================================================
+  # Stage 1: Unit Tests - Code Validation
+  # =============================================================================
+  unit-tests:
+    name: 📋 Unit Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install Python YAML parser
+        run: pip install pyyaml
+      
+      - name: Create test .env file
+        run: |
+          cat > .env << 'EOF'
+          COMPOSE_PROJECT_NAME=devopslab
+          TZ=UTC
+          DASHBOARD_PORT=9900
+          PORTAINER_PORT=9901
+          JENKINS_PORT=9902
+          GITEA_PORT=9903
+          GITEA_SSH_PORT=2222
+          GRAFANA_PORT=9904
+          PROMETHEUS_PORT=9905
+          CADVISOR_PORT=9906
+          NODE_EXPORTER_PORT=9907
+          REGISTRY_PORT=9908
+          JENKINS_ADMIN_USER=admin
+          JENKINS_ADMIN_PASSWORD=testpassword123
+          JENKINS_AGENT_SECRET=testsecret123
+          GITEA_ADMIN_USER=gitadmin
+          GITEA_ADMIN_PASSWORD=testpassword123
+          GITEA_ADMIN_EMAIL=admin@test.local
+          GRAFANA_ADMIN_USER=admin
+          GRAFANA_ADMIN_PASSWORD=testpassword123
+          PORTAINER_ADMIN_PASSWORD=testpassword123456
+          POSTGRES_USER=gitea
+          POSTGRES_PASSWORD=gitea123
+          POSTGRES_DB=gitea
+          EOF
+      
+      - name: Make test scripts executable
+        run: chmod +x tests/*.sh
+      
+      - name: Run Unit Tests
+        id: unit-tests
+        run: bash tests/unit_test.sh
+      
+      - name: Upload Unit Test Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: unit-test-report
+          path: tests/reports/unit-results.xml
+
+  # =============================================================================
+  # Stage 2: Integration Tests - Component Validation
+  # =============================================================================
+  integration-tests:
+    name: 🔗 Integration Tests
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install Python YAML parser
+        run: pip install pyyaml
+      
+      - name: Create test .env file
+        run: |
+          cat > .env << 'EOF'
+          COMPOSE_PROJECT_NAME=devopslab
+          TZ=UTC
+          DASHBOARD_PORT=9900
+          PORTAINER_PORT=9901
+          JENKINS_PORT=9902
+          GITEA_PORT=9903
+          GITEA_SSH_PORT=2222
+          GRAFANA_PORT=9904
+          PROMETHEUS_PORT=9905
+          CADVISOR_PORT=9906
+          NODE_EXPORTER_PORT=9907
+          REGISTRY_PORT=9908
+          JENKINS_ADMIN_USER=admin
+          JENKINS_ADMIN_PASSWORD=testpassword123
+          JENKINS_AGENT_SECRET=testsecret123
+          GITEA_ADMIN_USER=gitadmin
+          GITEA_ADMIN_PASSWORD=testpassword123
+          GITEA_ADMIN_EMAIL=admin@test.local
+          GRAFANA_ADMIN_USER=admin
+          GRAFANA_ADMIN_PASSWORD=testpassword123
+          PORTAINER_ADMIN_PASSWORD=testpassword123456
+          POSTGRES_USER=gitea
+          POSTGRES_PASSWORD=gitea123
+          POSTGRES_DB=gitea
+          EOF
+      
+      - name: Make test scripts executable
+        run: chmod +x tests/*.sh
+      
+      - name: Run Integration Tests
+        id: integration-tests
+        run: bash tests/integration_test.sh
+      
+      - name: Upload Integration Test Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: integration-test-report
+          path: tests/reports/integration-results.xml
+
+  # =============================================================================
+  # Stage 3: Smoke Tests - Deployment Readiness
+  # =============================================================================
+  smoke-tests:
+    name: 🔥 Smoke Tests
+    runs-on: ubuntu-latest
+    needs: integration-tests
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install Python YAML parser
+        run: pip install pyyaml
+      
+      - name: Create test .env file
+        run: |
+          cat > .env << 'EOF'
+          COMPOSE_PROJECT_NAME=devopslab
+          TZ=UTC
+          DASHBOARD_PORT=9900
+          PORTAINER_PORT=9901
+          JENKINS_PORT=9902
+          GITEA_PORT=9903
+          GITEA_SSH_PORT=2222
+          GRAFANA_PORT=9904
+          PROMETHEUS_PORT=9905
+          CADVISOR_PORT=9906
+          NODE_EXPORTER_PORT=9907
+          REGISTRY_PORT=9908
+          JENKINS_ADMIN_USER=admin
+          JENKINS_ADMIN_PASSWORD=testpassword123
+          JENKINS_AGENT_SECRET=testsecret123
+          GITEA_ADMIN_USER=gitadmin
+          GITEA_ADMIN_PASSWORD=testpassword123
+          GITEA_ADMIN_EMAIL=admin@test.local
+          GRAFANA_ADMIN_USER=admin
+          GRAFANA_ADMIN_PASSWORD=testpassword123
+          PORTAINER_ADMIN_PASSWORD=testpassword123456
+          POSTGRES_USER=gitea
+          POSTGRES_PASSWORD=gitea123
+          POSTGRES_DB=gitea
+          EOF
+      
+      - name: Make test scripts executable
+        run: chmod +x tests/*.sh
+      
+      - name: Run Smoke Tests
+        id: smoke-tests
+        run: bash tests/smoke_test.sh
+      
+      - name: Upload Smoke Test Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: smoke-test-report
+          path: tests/reports/smoke-results.xml
+
+  # =============================================================================
+  # Generate Reports
+  # =============================================================================
+  generate-reports:
+    name: 📊 Generate Reports
+    runs-on: ubuntu-latest
+    needs: [unit-tests, integration-tests, smoke-tests]
+    if: always()
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Download Unit Test Report
+        uses: actions/download-artifact@v4
+        with:
+          name: unit-test-report
+          path: tests/reports
+        continue-on-error: true
+      
+      - name: Download Integration Test Report
+        uses: actions/download-artifact@v4
+        with:
+          name: integration-test-report
+          path: tests/reports
+        continue-on-error: true
+      
+      - name: Download Smoke Test Report
+        uses: actions/download-artifact@v4
+        with:
+          name: smoke-test-report
+          path: tests/reports
+        continue-on-error: true
+      
+      - name: List downloaded reports
+        run: ls -la tests/reports/ || echo "No reports found"
+      
+      - name: Generate HTML Report
+        run: |
+          chmod +x tests/generate_html_report.sh
+          bash tests/generate_html_report.sh
+      
+      - name: Generate Job Summary
+        run: |
+          echo "## 🧪 DevOpsLab Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Stage | Status | Description |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|-------------|" >> $GITHUB_STEP_SUMMARY
+          echo "| 📋 Unit Tests | ${{ needs.unit-tests.result == 'success' && '✅ Passed' || '❌ Failed' }} | Code syntax & structure validation |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🔗 Integration Tests | ${{ needs.integration-tests.result == 'success' && '✅ Passed' || '❌ Failed' }} | Component integration validation |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🔥 Smoke Tests | ${{ needs.smoke-tests.result == 'success' && '✅ Passed' || '❌ Failed' }} | Deployment readiness validation |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ needs.unit-tests.result }}" == "success" ] && \
+             [ "${{ needs.integration-tests.result }}" == "success" ] && \
+             [ "${{ needs.smoke-tests.result }}" == "success" ]; then
+            echo "### 🎉 All tests passed! Ready for deployment." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### ⚠️ Some tests failed. Please review and fix before merging." >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📄 Download the **test-reports** artifact for detailed HTML report." >> $GITHUB_STEP_SUMMARY
+      
+      - name: Upload All Test Reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: |
+            tests/reports/*.xml
+            tests/reports/*.html
+          if-no-files-found: warn
+      
+      - name: Publish Test Results
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: Test Results
+          path: 'tests/reports/*.xml'
+          reporter: java-junit
+          fail-on-error: false
