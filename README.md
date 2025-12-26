@@ -1,8 +1,8 @@
-# DevOpsLab 🚀
+# DevOpsLab 
 
 A complete DevOps laboratory environment running on Docker. Start your entire DevOps infrastructure with a single command!
 
-## 🎯 Features
+## Features
 
 - **Single Command Deployment**: Start everything with `docker compose up -d`
 - **Centralized Dashboard**: Web-based dashboard to access all services at port 9900
@@ -13,7 +13,7 @@ A complete DevOps laboratory environment running on Docker. Start your entire De
 - **Artifact Repository**: Nexus Repository Manager for storing artifacts
 - **Easy Configuration**: All credentials in a single `.env` file
 
-## 📋 Services & Ports
+## Services & Ports
 
 | Service | Port | Description |
 |---------|------|-------------|
@@ -26,7 +26,7 @@ A complete DevOps laboratory environment running on Docker. Start your entire De
 | cAdvisor | 9906 | Container metrics |
 | Nexus Repository | 9909 | Artifact repository manager |
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
@@ -35,7 +35,7 @@ A complete DevOps laboratory environment running on Docker. Start your entire De
 
 ---
 
-### 🐧 Running on Linux
+### Running on Linux
 
 ```bash
 # Clone the repository
@@ -52,7 +52,7 @@ chmod +x devopslab.sh
 docker compose up -d
 ```
 
-### 🪟 Running on Windows (WSL2 + Docker Desktop)
+### Running on Windows (WSL2 + Docker Desktop)
 
 Open **Ubuntu/WSL terminal** and run:
 
@@ -68,7 +68,7 @@ chmod +x devopslab.sh
 ./devopslab.sh start
 ```
 
-> 💡 **Note**: Make sure Docker Desktop is running and WSL integration is enabled in Docker Desktop settings.
+> **Note**: Make sure Docker Desktop is running and WSL integration is enabled in Docker Desktop settings.
 
 ---
 
@@ -76,7 +76,7 @@ chmod +x devopslab.sh
 
 Open your browser and navigate to: **http://localhost:9900**
 
-## 🔐 Default Credentials
+## Default Credentials
 
 All credentials are configured in the `.env` file:
 
@@ -87,9 +87,9 @@ All credentials are configured in the `.env` file:
 | Grafana | admin | admin123 |
 | Portainer | admin | admin123456789 |
 
-> ⚠️ **Important**: Change these credentials in production!
+>  **Important**: Change these credentials in production!
 
-## 📦 Configuration
+## Configuration
 
 Edit the `.env` file to customize:
 
@@ -98,7 +98,7 @@ Edit the `.env` file to customize:
 - Timezone settings
 - Database credentials
 
-## 🛠️ Management Commands
+## Management Commands
 
 Use the `devopslab.sh` script for common tasks:
 
@@ -110,14 +110,14 @@ Use the `devopslab.sh` script for common tasks:
 ./devopslab.sh logs           # View all logs
 ./devopslab.sh logs jenkins   # View Jenkins logs
 ./devopslab.sh build          # Rebuild images
-./devopslab.sh cleanup        # Remove all data (⚠️ destructive)
+./devopslab.sh cleanup        # Remove all data (destructive)
 ./devopslab.sh cleanup-jenkins # Clean Jenkins data only
 ./devopslab.sh cleanup-gitea   # Clean Gitea data only
 ./devopslab.sh shell jenkins  # Open shell in Jenkins container
 ./devopslab.sh info           # Show URLs and credentials
 ```
 
-## 🌐 Accessing Services
+## Accessing Services
 
 ### DevOpsLab Dashboard
 Access: http://localhost:9900
@@ -157,7 +157,7 @@ Access: http://localhost:9909
 
 - Store Maven, npm, Docker, and other artifacts
 
-## 🤖 Jenkins Agents
+## Jenkins Agents
 
 Two Ubuntu-based Docker agents are pre-configured:
 
@@ -170,7 +170,7 @@ Both agents have:
 - Git
 - Common build tools
 
-## 🧹 Cleanup & Reset
+## Cleanup & Reset
 
 ### Clean Specific Service
 
@@ -207,7 +207,7 @@ Edit `.env` and change the conflicting port:
 JENKINS_PORT=9920  # Change from 9902 to 9920
 ```
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 DevOps-lab/
@@ -229,7 +229,7 @@ DevOps-lab/
 └── tests/
 ```
 
-## 🎓 Learning Resources
+## Learning Resources
 
 - [Jenkins Documentation](https://www.jenkins.io/doc/)
 - [Gitea Documentation](https://docs.gitea.io/)
@@ -237,10 +237,10 @@ DevOps-lab/
 - [Prometheus Documentation](https://prometheus.io/docs/)
 - [Docker Documentation](https://docs.docker.com/)
 
-## 📝 License
+## License
 
 This project is provided as-is for educational and development purposes.
 
 ---
 
-**Happy DevOps Learning! 🎉**
+**Happy DevOps Learning!**
