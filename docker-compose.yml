@@ -1,0 +1,305 @@
+networks:
+  devopslab:
+    driver: bridge
+    name: devopslab
+
+volumes:
+  jenkins_home:
+    name: devopslab_jenkins_home
+  gitea_data:
+    name: devopslab_gitea_data
+  gitea_db:
+    name: devopslab_gitea_db
+  grafana_data:
+    name: devopslab_grafana_data
+  prometheus_data:
+    name: devopslab_prometheus_data
+  portainer_data:
+    name: devopslab_portainer_data
+  nexus_data:
+    name: devopslab_nexus_data
+  jenkins_agent1_home:
+    name: devopslab_jenkins_agent1_home
+  jenkins_agent2_home:
+    name: devopslab_jenkins_agent2_home
+
+services:
+  # ===========================================
+  # Dashboard - Custom DevOpsLab Dashboard
+  # ===========================================
+  dashboard:
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile
+    container_name: devopslab-dashboard
+    environment:
+      - NODE_ENV=production
+      - TZ=${TZ}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "${DASHBOARD_PORT}:3000"
+    networks:
+      - devopslab
+    restart: unless-stopped
+    labels:
+      - "devopslab.service=dashboard"
+      - "devopslab.name=Dashboard"
+      - "devopslab.port=${DASHBOARD_PORT}"
+
+  # ===========================================
+  # Portainer - Container Management & Web Terminal
+  # ===========================================
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: devopslab-portainer
+    command: --admin-password-file /tmp/portainer_password
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+      - ./config/portainer/password:/tmp/portainer_password:ro
+    ports:
+      - "${PORTAINER_PORT}:9000"
+    networks:
+      - devopslab
+    restart: unless-stopped
+    labels:
+      - "devopslab.service=portainer"
+      - "devopslab.name=Portainer"
+      - "devopslab.port=${PORTAINER_PORT}"
+
+  # ===========================================
+  # Jenkins Master
+  # ===========================================
+  jenkins:
+    build:
+      context: ./context/jenkins
+      dockerfile: Dockerfile
+    container_name: devopslab-jenkins
+    privileged: true
+    user: root
+    environment:
+      - JENKINS_ADMIN_ID=${JENKINS_ADMIN_USER}
+      - JENKINS_ADMIN_PASSWORD=${JENKINS_ADMIN_PASSWORD}
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - JAVA_OPTS=-Djenkins.install.runSetupWizard=false -Dhudson.plugins.git.GitSCM.ALLOW_LOCAL_CHECKOUT=true
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "${JENKINS_PORT}:8080"
+      - "50000:50000"
+    networks:
+      - devopslab
+    restart: unless-stopped
+    labels:
+      - "devopslab.service=jenkins"
+      - "devopslab.name=Jenkins"
+      - "devopslab.port=${JENKINS_PORT}"
+    depends_on:
+      - portainer
+
+  # ===========================================
+  # Jenkins Agent 1 - Ubuntu
+  # ===========================================
+  jenkins-agent-1:
+    build:
+      context: ./context/jenkins-agent
+      dockerfile: Dockerfile
+    container_name: devopslab-jenkins-agent-1
+    privileged: true
+    environment:
+      - JENKINS_URL=http://jenkins:8080
+      - JENKINS_AGENT_NAME=ubuntu-agent-1
+      - JENKINS_SECRET=${JENKINS_AGENT_SECRET}
+      - JENKINS_AGENT_WORKDIR=/home/jenkins/agent
+      - JENKINS_ADMIN_USER=${JENKINS_ADMIN_USER}
+      - JENKINS_ADMIN_PASSWORD=${JENKINS_ADMIN_PASSWORD}
+    volumes:
+      - jenkins_agent1_home:/home/jenkins/agent
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - devopslab
+    restart: unless-stopped
+    depends_on:
+      - jenkins
+    labels:
+      - "devopslab.service=jenkins-agent"
+      - "devopslab.name=Jenkins Agent 1"
+
+  # ===========================================
+  # Jenkins Agent 2 - Ubuntu
+  # ===========================================
+  jenkins-agent-2:
+    build:
+      context: ./context/jenkins-agent
+      dockerfile: Dockerfile
+    container_name: devopslab-jenkins-agent-2
+    privileged: true
+    environment:
+      - JENKINS_URL=http://jenkins:8080
+      - JENKINS_AGENT_NAME=ubuntu-agent-2
+      - JENKINS_SECRET=${JENKINS_AGENT_SECRET}
+      - JENKINS_AGENT_WORKDIR=/home/jenkins/agent
+      - JENKINS_ADMIN_USER=${JENKINS_ADMIN_USER}
+      - JENKINS_ADMIN_PASSWORD=${JENKINS_ADMIN_PASSWORD}
+    volumes:
+      - jenkins_agent2_home:/home/jenkins/agent
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - devopslab
+    restart: unless-stopped
+    depends_on:
+      - jenkins
+    labels:
+      - "devopslab.service=jenkins-agent"
+      - "devopslab.name=Jenkins Agent 2"
+
+  # ===========================================
+  # Gitea - Git Repository
+  # ===========================================
+  gitea:
+    image: gitea/gitea:latest
+    container_name: devopslab-gitea
+    environment:
+      - USER_UID=1000
+      - USER_GID=1000
+      - GITEA__database__DB_TYPE=postgres
+      - GITEA__database__HOST=gitea-db:5432
+      - GITEA__database__NAME=${POSTGRES_DB}
+      - GITEA__database__USER=${POSTGRES_USER}
+      - GITEA__database__PASSWD=${POSTGRES_PASSWORD}
+      - GITEA__server__ROOT_URL=http://localhost:${GITEA_PORT}
+      - GITEA__server__HTTP_PORT=3000
+      - GITEA__security__INSTALL_LOCK=true
+      - GITEA__service__DISABLE_REGISTRATION=false
+    volumes:
+      - gitea_data:/data
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "${GITEA_PORT}:3000"
+      - "${GITEA_SSH_PORT}:22"
+    networks:
+      - devopslab
+    restart: unless-stopped
+    depends_on:
+      - gitea-db
+    labels:
+      - "devopslab.service=gitea"
+      - "devopslab.name=Gitea"
+      - "devopslab.port=${GITEA_PORT}"
+
+  gitea-db:
+    image: postgres:14-alpine
+    container_name: devopslab-gitea-db
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    volumes:
+      - gitea_db:/var/lib/postgresql/data
+    networks:
+      - devopslab
+    restart: unless-stopped
+    labels:
+      - "devopslab.service=database"
+      - "devopslab.name=Gitea Database"
+
+  # ===========================================
+  # Grafana - Monitoring Dashboard
+  # ===========================================
+  grafana:
+    image: grafana/grafana:latest
+    container_name: devopslab-grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=http://localhost:${GRAFANA_PORT}
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-piechart-panel
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./config/grafana/provisioning:/etc/grafana/provisioning
+      - ./config/grafana/dashboards:/var/lib/grafana/dashboards
+    ports:
+      - "${GRAFANA_PORT}:3000"
+    networks:
+      - devopslab
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    labels:
+      - "devopslab.service=grafana"
+      - "devopslab.name=Grafana"
+      - "devopslab.port=${GRAFANA_PORT}"
+
+  # ===========================================
+  # Prometheus - Metrics Collection
+  # ===========================================
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: devopslab-prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=15d'
+      - '--web.enable-lifecycle'
+    volumes:
+      - ./config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    ports:
+      - "${PROMETHEUS_PORT}:9090"
+    networks:
+      - devopslab
+    restart: unless-stopped
+    labels:
+      - "devopslab.service=prometheus"
+      - "devopslab.name=Prometheus"
+      - "devopslab.port=${PROMETHEUS_PORT}"
+
+  # ===========================================
+  # cAdvisor - Container Metrics
+  # ===========================================
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    container_name: devopslab-cadvisor
+    privileged: true
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+      - /etc/machine-id:/etc/machine-id:ro
+    ports:
+      - "${CADVISOR_PORT}:8080"
+    networks:
+      - devopslab
+    restart: unless-stopped
+    labels:
+      - "devopslab.service=cadvisor"
+      - "devopslab.name=cAdvisor"
+      - "devopslab.port=${CADVISOR_PORT}"
+
+  # ===========================================
+  # Nexus Repository Manager - Artifact Repository
+  # ===========================================
+  nexus:
+    image: sonatype/nexus3:latest
+    container_name: devopslab-nexus
+    environment:
+      - INSTALL4J_ADD_VM_PARAMS=-Xms512m -Xmx1024m -XX:MaxDirectMemorySize=1024m
+    volumes:
+      - nexus_data:/nexus-data
+    ports:
+      - "${NEXUS_PORT}:8081"
+    networks:
+      - devopslab
+    restart: unless-stopped
+    labels:
+      - "devopslab.service=nexus"
+      - "devopslab.name=Nexus Repository"
+      - "devopslab.port=${NEXUS_PORT}"
