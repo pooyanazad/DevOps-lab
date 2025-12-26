@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+
+# Environment files
+.env.local
+.env.production
+
+# Docker volumes (not tracked)
+volumes/
+
+# Reports
+reports/
+
+# Temp files
+*.tmp
+*.log
+*.bak
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
