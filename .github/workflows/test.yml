@@ -46,7 +46,7 @@ jobs:
           PROMETHEUS_PORT=9905
           CADVISOR_PORT=9906
           NODE_EXPORTER_PORT=9907
-          REGISTRY_PORT=9908
+          NEXUS_PORT=9908
           JENKINS_ADMIN_USER=admin
           JENKINS_ADMIN_PASSWORD=testpassword123
           JENKINS_AGENT_SECRET=testsecret123
@@ -109,7 +109,7 @@ jobs:
           PROMETHEUS_PORT=9905
           CADVISOR_PORT=9906
           NODE_EXPORTER_PORT=9907
-          REGISTRY_PORT=9908
+          NEXUS_PORT=9908
           JENKINS_ADMIN_USER=admin
           JENKINS_ADMIN_PASSWORD=testpassword123
           JENKINS_AGENT_SECRET=testsecret123
@@ -172,7 +172,7 @@ jobs:
           PROMETHEUS_PORT=9905
           CADVISOR_PORT=9906
           NODE_EXPORTER_PORT=9907
-          REGISTRY_PORT=9908
+          NEXUS_PORT=9908
           JENKINS_ADMIN_USER=admin
           JENKINS_ADMIN_PASSWORD=testpassword123
           JENKINS_AGENT_SECRET=testsecret123
